@@ -12,6 +12,7 @@
     <main>
       <Location />
       <Inventory />
+      <!-- <Upgrades /> -->
       <LogList />
     </main>
   </div>
@@ -23,6 +24,7 @@ import { onMounted } from 'vue'
 import Location from '@/components/TheLocation.vue'
 import Inventory from '@/components/TheInventory.vue'
 import LogList from '@/components/TheLogList.vue'
+import Upgrades from '@/components/TheUpgrades.vue'
 
 import { useGameStore } from './stores/gameStore'
 

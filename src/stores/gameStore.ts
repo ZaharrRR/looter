@@ -1,102 +1,11 @@
 import { defineStore } from 'pinia'
 
-interface Item {
-  name: string
-  quantity: number
-  value: number
-}
-
-interface Chest {
-  opened: boolean
-  loot: Item
-}
-
-interface Location {
-  id: string
-  name: string
-  chests: Chest[]
-}
-
-interface Player {
-  inventory: Item[]
-  gold: number
-}
-
-interface Upgrade {
-  name: string
-  price: {
-    gold: number
-    resources: Item[]
-  }
-  effect: string
-}
-
-const itemTypes = [
-  { name: 'Gold', value: 1, minQuantity: 1, maxQuantity: 20 },
-  { name: 'Diamond', value: 20, minQuantity: 1, maxQuantity: 2 },
-  { name: 'Sword', value: 26, minQuantity: 1, maxQuantity: 2 },
-  { name: 'Stick', value: 1, minQuantity: 1, maxQuantity: 5 },
-  { name: 'Axe', value: 10, minQuantity: 1, maxQuantity: 1 },
-  { name: 'Shield', value: 8, minQuantity: 1, maxQuantity: 1 },
-  { name: 'Potion', value: 5, minQuantity: 1, maxQuantity: 3 },
-  { name: 'Gem', value: 15, minQuantity: 1, maxQuantity: 3 },
-  { name: 'Bone', value: 2, minQuantity: 1, maxQuantity: 1 }
-]
-
-const locationTypes = [
-  { name: 'Cave' },
-  { name: 'Dungeon' },
-  { name: 'Castle' },
-  { name: 'Forest' },
-  { name: 'Mountain' },
-  { name: 'Beach' },
-  { name: 'Island' },
-  { name: 'Ruins' },
-  { name: 'Temple' },
-  { name: 'Volcano' }
-]
-
-function generateLoot() {
-  const randomIndex = Math.floor(Math.random() * itemTypes.length)
-  const itemType = itemTypes[randomIndex]
-  const quantity =
-    Math.floor(Math.random() * (itemType.maxQuantity - itemType.minQuantity + 1)) +
-    itemType.minQuantity
-  return {
-    name: itemType.name,
-    quantity: quantity,
-    value: itemType.value
-  }
-}
-
-function generateChests(numberOfChests: number): Chest[] {
-  const chests: Chest[] = []
-  for (let i = 0; i < numberOfChests; i++) {
-    chests.push({
-      opened: false,
-      loot: generateLoot()
-    })
-  }
-  return chests
-}
-
-function generateLocations(numberOfLocations: number): Location[] {
-  const locations: Location[] = []
-  for (let i = 0; i < numberOfLocations; i++) {
-    const randomNameIndex = Math.floor(Math.random() * locationTypes.length)
-    const randomNumberOfChests = Math.floor(Math.random() * 5) + 1
-    locations.push({
-      id: (i + 1).toString(),
-      name: locationTypes[randomNameIndex].name,
-      chests: generateChests(randomNumberOfChests)
-    })
-  }
-  return locations
-}
+import type { Location, Player, Item } from '@/types'
+import { generateLocations, generateChests } from '@/utils/generators'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
-    locations: generateLocations(3),
+    locations: generateLocations(3, 3, 3),
     player: {
       inventory: [
         {
@@ -111,7 +20,11 @@ export const useGameStore = defineStore('game', {
     currentLocation: null as Location | null,
     lastLocationGenerationTime: null as Date | null,
     remainingTimeForGeneration: 0,
-    log: [] as string[]
+    log: [] as string[],
+    upgrades: {
+      remainingTimeForGenerationSpeed: 0,
+      additionalСhests: 0
+    }
   }),
   actions: {
     //locations
@@ -133,15 +46,19 @@ export const useGameStore = defineStore('game', {
       if (this.lastLocationGenerationTime) {
         const now = new Date()
         const timeDifference = now.getTime() - this.lastLocationGenerationTime.getTime()
-        if (timeDifference < 60000) {
+        if (timeDifference < 60000 - this.upgrades.remainingTimeForGenerationSpeed) {
           alert('You cant find new locations yet :<')
           return
         }
       }
 
-      this.locations = generateLocations(Math.floor(Math.random() * 5) + 1)
+      this.locations = generateLocations(
+        Math.floor(Math.random() * 3) + 1,
+        Math.floor(Math.random() * 3) + 1,
+        Math.floor(Math.random() * 3) + 1
+      )
       this.lastLocationGenerationTime = new Date()
-      this.remainingTimeForGeneration = 60000
+      this.remainingTimeForGeneration = 60000 - this.upgrades.remainingTimeForGenerationSpeed
 
       this.locations.forEach((localtion) => {
         this.log.unshift(
@@ -154,8 +71,9 @@ export const useGameStore = defineStore('game', {
       if (this.lastLocationGenerationTime) {
         const now = new Date()
         const timeDifference = now.getTime() - this.lastLocationGenerationTime.getTime()
-        if (timeDifference < 60000) {
-          this.remainingTimeForGeneration = 60000 - timeDifference
+        if (timeDifference < 60000 - this.upgrades.remainingTimeForGenerationSpeed) {
+          this.remainingTimeForGeneration =
+            60000 - this.upgrades.remainingTimeForGenerationSpeed - timeDifference
         } else {
           this.remainingTimeForGeneration = 0
         }
@@ -164,28 +82,35 @@ export const useGameStore = defineStore('game', {
 
     // loot and inventory
 
-    openChest(index: number) {
-      if (this.currentLocation && !this.currentLocation.chests[index].opened) {
-        this.currentLocation.chests[index].opened = true
-        const loot = this.currentLocation.chests[index].loot
+    // openChest(index: number) {
+    //   if (this.currentLocation && !this.currentLocation.chests[index].opened) {
+    //     this.currentLocation.chests[index].opened = true
+    //     const loot = this.currentLocation.chests[index].loot
 
-        if (loot.name === 'Gold') {
-          this.player.gold += loot.quantity
-        } else {
-          this.addItem(loot)
-        }
+    //     if (loot.name === 'Gold') {
+    //       this.player.gold += loot.quantity
+    //     } else {
+    //       this.addItem(loot)
+    //     }
 
-        this.log.unshift(`${this.currentLocation.name}: you found  ${loot.name} (${loot.quantity})`)
-      }
-    },
+    //     this.log.unshift(`${this.currentLocation.name}: you found  ${loot.name} (${loot.quantity})`)
+    //   }
+    // },
 
     addItem(item: Item) {
-      const existingItem = this.player.inventory.find((i) => i.name === item.name)
-      if (existingItem) {
-        existingItem.quantity += item.quantity
+      if (item.name === 'Gold') {
+        this.player.gold += item.quantity
       } else {
-        this.player.inventory.push({ ...item })
+        const existingItem = this.player.inventory.find((i) => i.name === item.name)
+        if (existingItem) {
+          existingItem.quantity += item.quantity
+        } else {
+          this.player.inventory.push({ ...item })
+        }
       }
+      this.log.unshift(
+        `at location - ${this.currentLocation?.name}: you take  ${item.name} (${item.quantity})`
+      )
     },
 
     sellItem(itemName: string, quantity: number) {

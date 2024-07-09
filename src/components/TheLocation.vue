@@ -32,30 +32,52 @@
       <div v-if="gameStore.currentLocation.chests" class="chests">
         <p>chests</p>
         <div v-for="(chest, index) in gameStore.currentLocation.chests" :key="index">
-          <Chest :chest="chest" @open="openChest(index)" />
+          <ChestBlock :chest="chest" @open="openChest(index)" />
         </div>
       </div>
     </div>
+
+    <ModalWindow :is-opened="isOpenedChestModal" @close="CloseChestModal">
+      <template #title> Chest modal </template>
+      <div v-for="item in selectedChest?.loot" :key="item.name">
+        <p>{{ item.name }} - {{ item.quantity }} (Value: {{ item.value }})</p>
+        <button @click="takeItem(item)" class="btn">take</button>
+      </div>
+    </ModalWindow>
   </div>
 </template>
 
 <script lang="ts" setup>
 import { ref } from 'vue'
 
+import ModalWindow from '@/components/UI/ModalWindow.vue'
+
 import { useGameStore } from '@/stores/gameStore'
 
-import Chest from '@/components/ChestBlock.vue'
+import ChestBlock from '@/components/ChestBlock.vue'
+import type { Chest, Item } from '@/types'
 
 const gameStore = useGameStore()
 
 const selectedLocation = ref('')
+const selectedChest = ref<Chest>()
+
+const isOpenedChestModal = ref(false)
 
 const setLocation = () => {
   gameStore.setCurrentLocation(selectedLocation.value)
 }
 
 const openChest = (index: number) => {
-  gameStore.openChest(index)
+  selectedChest.value = gameStore.currentLocation?.chests[index]
+
+  isOpenedChestModal.value = true
+}
+
+const takeItem = (item: Item) => {
+  gameStore.addItem(item)
+
+  selectedChest.value?.loot.splice(selectedChest.value?.loot.indexOf(item), 1)
 }
 
 const findLocations = () => {
@@ -66,6 +88,11 @@ const findLocations = () => {
 setInterval(() => {
   gameStore.updateRemainingTime()
 }, 1000)
+
+const CloseChestModal = () => {
+  isOpenedChestModal.value = false
+  if (selectedChest.value) selectedChest.value.opened = true
+}
 </script>
 
 <style scoped>
