@@ -19,3 +19,11 @@ export interface Player {
   inventory: Item[]
   gold: number
 }
+
+export interface Upgrade {
+  name: string
+  value: number
+  description: string
+  cost: number
+  resources: Item[]
+}

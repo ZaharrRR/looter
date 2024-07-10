@@ -3,6 +3,10 @@ import { defineStore } from 'pinia'
 import type { Location, Player, Item } from '@/types'
 import { generateLocations, generateChests } from '@/utils/generators'
 
+import { useStateStore } from './StateStore'
+
+const stateStore = useStateStore()
+
 export const useGameStore = defineStore('game', {
   state: () => ({
     locations: generateLocations(3, 3, 3),
@@ -53,9 +57,9 @@ export const useGameStore = defineStore('game', {
       }
 
       this.locations = generateLocations(
-        Math.floor(Math.random() * 3) + 1,
-        Math.floor(Math.random() * 3) + 1,
-        Math.floor(Math.random() * 3) + 1
+        Math.floor(Math.random() * stateStore.locationRate) + 1,
+        Math.floor(Math.random() * stateStore.chestRate) + 1,
+        Math.floor(Math.random() * stateStore.lootRate) + 1
       )
       this.lastLocationGenerationTime = new Date()
       this.remainingTimeForGeneration = 60000 - this.upgrades.remainingTimeForGenerationSpeed
